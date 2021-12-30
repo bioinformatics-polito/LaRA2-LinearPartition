@@ -29,6 +29,9 @@
 
 using namespace std;
 
+namespace linearpartition
+{
+
 unsigned long quickselect_partition(vector<pair<pf_type, int>>& scores, unsigned long lower, unsigned long upper) {
     pf_type pivot = scores[upper].first;
     while (lower < upper) {
@@ -60,7 +63,7 @@ pf_type BeamCKYParser::beam_prune(std::unordered_map<int, State> &beamstep) {
         pf_type newalpha = (k >= 0 ? bestC[k].alpha : pf_type(0.0)) + cand.alpha;
         scores.push_back(make_pair(newalpha, i));
     }
-    if (scores.size() <= beam) return VALUE_MIN;
+    if ((int)scores.size() <= beam) return VALUE_MIN;
     pf_type threshold = quickselect(scores, 0, scores.size() - 1, scores.size() - beam);
     for (auto &p : scores) {
         if (p.first < threshold) beamstep.erase(p.second);
@@ -104,7 +107,7 @@ void BeamCKYParser::parse(string& seq) {
 
     prepare(static_cast<unsigned>(seq.length()));
 
-    for (int i = 0; i < seq_length; ++i)
+    for (unsigned i = 0; i < seq_length; ++i)
         nucs[i] = GET_ACGU_NUM(seq[i]);
 
     vector<int> next_pair[NOTON];
@@ -135,7 +138,7 @@ void BeamCKYParser::parse(string& seq) {
 #endif
 
     value_type newscore;
-    for(int j = 0; j < seq_length; ++j) {
+    for(unsigned j = 0; j < seq_length; ++j) {
         int nucj = nucs[j];
         int nucj1 = (j+1) < seq_length ? nucs[j+1] : -1;
 
@@ -148,7 +151,7 @@ void BeamCKYParser::parse(string& seq) {
 
         // beam of H
         {
-            if (beam > 0 && beamstepH.size() > beam) beam_prune(beamstepH);
+            if (beam > 0 && (int)beamstepH.size() > beam) beam_prune(beamstepH);
 
             {
                 // for nucj put H(j, j_next) into H[j_next]
@@ -181,7 +184,7 @@ void BeamCKYParser::parse(string& seq) {
                 //   1. extend h(i, j) to h(i, jnext)
                 //   2. generate p(i, j)
                 for (auto &item : beamstepH) {
-                    int i = item.first;
+                    unsigned i = item.first;
                     State &state = item.second;
                     int nuci = nucs[i];
                     int jnext = next_pair[nuci][j];
@@ -219,7 +222,7 @@ void BeamCKYParser::parse(string& seq) {
 
         // beam of Multi
         {
-            if (beam > 0 && beamstepMulti.size() > beam) beam_prune(beamstepMulti);
+            if (beam > 0 && (int)beamstepMulti.size() > beam) beam_prune(beamstepMulti);
 
             for(auto& item : beamstepMulti) {
                 int i = item.first;
@@ -256,7 +259,7 @@ void BeamCKYParser::parse(string& seq) {
 
         // beam of P
         {   
-            if (beam > 0 && beamstepP.size() > beam) beam_prune(beamstepP);
+            if (beam > 0 && (int)beamstepP.size() > beam) beam_prune(beamstepP);
 
             // for every state in P[j]
             //   1. generate new helix/bulge
@@ -283,7 +286,7 @@ void BeamCKYParser::parse(string& seq) {
                             int nucq = nucs[q];
                             int nucq_1 = nucs[q - 1];
 
-                            if (p == i - 1 && q == j + 1) {
+                            if (p == i - 1 && (unsigned)q == j + 1) {
                                 // helix
 #ifdef lpv
                                 newscore = -v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
@@ -382,7 +385,7 @@ void BeamCKYParser::parse(string& seq) {
 
         // beam of M2
         {
-            if (beam > 0 && beamstepM2.size() > beam) beam_prune(beamstepM2);
+            if (beam > 0 && (int)beamstepM2.size() > beam) beam_prune(beamstepM2);
 
             for(auto& item : beamstepM2) {
                 int i = item.first;
@@ -408,10 +411,10 @@ void BeamCKYParser::parse(string& seq) {
                 Fast_LogPlusEquals(beamstepM[i].alpha, state.alpha);  
             }
         }
-
+        
         // beam of M
         {
-            if (beam > 0 && beamstepM.size() > beam) beam_prune(beamstepM);
+            if (beam > 0 && (int)beamstepM.size() > beam) beam_prune(beamstepM);
 
             for(auto& item : beamstepM) {
                 int i = item.first;
@@ -450,7 +453,7 @@ void BeamCKYParser::parse(string& seq) {
     // unsigned long nos_tot = nos_H + nos_P + nos_M2 + nos_Multi + nos_M + nos_C;
 
 #ifdef lpv
-    fprintf(stderr,"Free Energy of Ensemble: %.2f kcal/mol\n", -kT * viterbi.alpha / 100.0);
+    m_energy = -kT * viterbi.alpha / 100.0; // Free Energy of Ensemble kcal/mol
 #else
     fprintf(stderr,"Log Partition Coefficient: %.5f\n", viterbi.alpha);
 #endif
@@ -574,7 +577,7 @@ BeamCKYParser::BeamCKYParser(int beam_size,
 
         }
 
-        for (int i = 0; i<SHAPE_data.size(); i++){
+        for (size_t i = 0; i<SHAPE_data.size(); i++){
             temp_after_mb_shape = SHAPE_data[i] < 0 ? 0. : (m * log(SHAPE_data[i] + 1) + b);
 
             pseudo_energy_stack.push_back((int)roundf(temp_after_mb_shape * 100.));
@@ -585,119 +588,13 @@ BeamCKYParser::BeamCKYParser(int beam_size,
 
         }
     }
-
-
-
 }
 
-int main(int argc, char** argv){
-
-    struct timeval total_starttime, total_endtime;
-    gettimeofday(&total_starttime, NULL);
-
-    int beamsize = 100;
-    bool sharpturn = false;
-    bool is_verbose = false;
-    string bpp_file;
-    string bpp_prefix;
-    bool pf_only = false;
-    float bpp_cutoff = 0.0;
-    string forest_file;
-
-    float MEA_gamma = 3.0;
-    bool mea = false;
-    bool MEA_bpseq = false;
-    string MEA_prefix;
-    float ThreshKnot_threshold = 0.3;
-    bool ThreshKnot = false;
-    string ThresKnot_prefix;
-
-
-    // SHAPE
-    string shape_file_path = "";
-
-
-
-    if (argc > 1) {
-        beamsize = atoi(argv[1]);
-        sharpturn = atoi(argv[2]) == 1;
-        is_verbose = atoi(argv[3]) == 1;
-        bpp_file = argv[4];
-        bpp_prefix = argv[5];
-        pf_only = atoi(argv[6]) == 1;
-        bpp_cutoff = atof(argv[7]);
-    	forest_file = argv[8];
-        mea = atoi(argv[9]) == 1;
-        MEA_gamma = atof(argv[10]);
-        ThreshKnot = atoi(argv[11]) == 1;
-        ThreshKnot_threshold = atof(argv[12]);
-        ThresKnot_prefix = argv[13];
-        MEA_prefix = argv[14];
-        MEA_bpseq = atoi(argv[15]) == 1;
-        shape_file_path = argv[16];
-    }
-
-
-    if (is_verbose) printf("beam size: %d\n", beamsize);
-
-    // variables for decoding
-    int num=0, total_len = 0;
-    unsigned long long total_states = 0;
-    double total_score = .0;
-    double total_time = .0;
-
-    int seq_index = 0;
-    string bpp_file_index = "";
-    string ThreshKnot_file_index = "";
-    string MEA_file_index = "";
-
-    for (string seq; getline(cin, seq);) {
-        if (seq.length() == 0)
-            continue;
-
-        if (seq[0] == ';' || seq[0] == '>') {
-            printf("%s\n", seq.c_str());
-            if (!bpp_file.empty()) {
-                FILE *fptr = fopen(bpp_file.c_str(), "a"); 
-                if (fptr == NULL) { 
-                    printf("Could not open file!\n"); 
-                    return 0; 
-                }
-                fprintf(fptr, "%s\n", seq.c_str());
-                fclose(fptr); 
-            }
-            continue;
-        }
-
-        if (!isalpha(seq[0])){
-            printf("Unrecognized sequence: %s\n", seq.c_str());
-            continue;
-        }
-
-        seq_index ++;
-        if (!bpp_prefix.empty()) bpp_file_index = bpp_prefix + to_string(seq_index);
-
-        if (!ThresKnot_prefix.empty()) ThreshKnot_file_index = ThresKnot_prefix + to_string(seq_index);
-
-        if (!MEA_prefix.empty()) MEA_file_index = MEA_prefix + to_string(seq_index);
-        
-        // convert to uppercase
-        transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
-
-        // convert T to U
-        replace(seq.begin(), seq.end(), 'T', 'U');
-
-        // lhuang: moved inside loop, fixing an obscure but crucial bug in initialization
-        BeamCKYParser parser(beamsize, !sharpturn, is_verbose, bpp_file, bpp_file_index, pf_only, bpp_cutoff, forest_file, mea, MEA_gamma, MEA_file_index, MEA_bpseq, ThreshKnot, ThreshKnot_threshold, ThreshKnot_file_index, shape_file_path);
-
-        // BeamCKYParser::DecoderResult result = parser.parse(seq);
-        parser.parse(seq);
-    }
-
-    gettimeofday(&total_endtime, NULL);
-    double total_elapsed_time = total_endtime.tv_sec - total_starttime.tv_sec + (total_endtime.tv_usec-total_starttime.tv_usec)/1000000.0;
-
-    if(is_verbose) fprintf(stderr,"Total Time: %.2f seconds.\n", total_elapsed_time);
-
-    return 0;
+#ifdef lpv
+float BeamCKYParser::get_energy()
+{
+    return m_energy;
 }
+#endif
+
+} // end namespace linearpartition

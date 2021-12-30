@@ -24,6 +24,9 @@
 
 using namespace std;
 
+namespace linearpartition
+{
+
 #ifdef lpv
   typedef float pf_type;
 #else
@@ -118,6 +121,12 @@ public:
 
     // DecoderResult parse(string& seq);
     void parse(string& seq);
+    
+    bool get_bpp_ij (pf_type &bpp, const int i, const int j);
+    
+#ifdef lpv
+    float get_energy();
+#endif
 
 private:
     void get_parentheses(char* result, string& seq);
@@ -131,6 +140,10 @@ private:
     vector<int> if_triloops;
 
     State *bestC;
+
+#ifdef lpv
+    float m_energy;
+#endif
 
     int *nucs;
 
@@ -248,5 +261,6 @@ inline pf_type Fast_Exp(pf_type x)
         return ((pf_type(0.1199175927)*x+pf_type(0.4815668234))*x+pf_type(0.9975991939))*x+pf_type(0.9999505077);
     return (x > pf_type(46.052) ? pf_type(1e20) : expf(x));
 }
+} // end namespace linearpartition
 
 #endif //FASTCKY_BEAMCKYPAR_H

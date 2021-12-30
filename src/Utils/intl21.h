@@ -5,6 +5,9 @@
 #define NBPAIRS 7
 #endif
 
+namespace linearpartition
+{
+
 int int21_37[NBPAIRS+1][NBPAIRS+1][5][5][5] =
 {{{{{   VIE_INF,   VIE_INF,   VIE_INF,   VIE_INF,   VIE_INF}
    ,{   VIE_INF,   VIE_INF,   VIE_INF,   VIE_INF,   VIE_INF}
@@ -1998,3 +2001,4 @@ int int21_37[NBPAIRS+1][NBPAIRS+1][5][5][5] =
    }
   }
  }};
+} // namespace linearpartition

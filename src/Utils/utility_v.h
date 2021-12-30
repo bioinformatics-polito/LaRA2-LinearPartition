@@ -25,6 +25,9 @@
 
 #define MAXLOOP 30
 
+namespace linearpartition
+{
+
 inline int MIN2(int a, int b) {if (a <= b)return a;else return b;}
 inline int MAX2(int a, int b) {if (a >= b)return a;else return b;}
 
@@ -200,8 +203,12 @@ inline int E_MLstem(int type, int si1, int sj1) {
 }
 
 inline int v_score_M1(int i, int j, int k, int nuci_1, int nuci, int nuck, int nuck1, int len) {
-    int p = i;
-    int q = k;
+    //int p = i;
+    //int q = k;
+    (void) i;
+    (void) j;
+    (void) k;
+    (void) len;
     int tt = NUM_TO_PAIR(nuci, nuck);
     int sp1 = NUM_TO_NUC(nuci_1);
     int sq1 = NUM_TO_NUC(nuck1);
@@ -211,10 +218,16 @@ inline int v_score_M1(int i, int j, int k, int nuci_1, int nuci, int nuck, int n
 }
 
 inline int v_score_multi_unpaired(int i, int j) {
+    (void) i;
+    (void) j;
     return 0;
 }
 
 inline int v_score_multi(int i, int j, int nuci, int nuci1, int nucj_1, int nucj, int len) {
+    (void) i;
+    (void) j;
+    (void) len;
+
     int tt = NUM_TO_PAIR(nucj, nuci);
     int si1 = NUM_TO_NUC(nuci1);
     int sj1 = NUM_TO_NUC(nucj_1);
@@ -224,6 +237,10 @@ inline int v_score_multi(int i, int j, int nuci, int nuci1, int nucj_1, int nucj
 
 // exterior_loop
 inline int v_score_external_paired(int i, int j, int nuci_1, int nuci, int nucj, int nucj1, int len) {
+    (void) i;
+    (void) j;
+    (void) len;
+    
     int type = NUM_TO_PAIR(nuci, nucj);
     int si1 = NUM_TO_NUC(nuci_1);
     int sj1 = NUM_TO_NUC(nucj1);
@@ -245,7 +262,11 @@ inline int v_score_external_paired(int i, int j, int nuci_1, int nuci, int nucj,
 }
 
 inline int v_score_external_unpaired(int i, int j) {
+    (void) i;
+    (void) j;
     return 0;
 }
+
+}// end namespace linearpartition
 
 #endif //FASTCKY_UTILITY_V_H

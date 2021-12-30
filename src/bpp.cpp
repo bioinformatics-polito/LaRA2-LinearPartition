@@ -12,6 +12,8 @@
 #include "LinearPartition.h"
 
 using namespace std;
+namespace linearpartition
+{
 
 void BeamCKYParser::output_to_file(string file_name, const char * type) {
     if(!file_name.empty()) {
@@ -22,9 +24,9 @@ void BeamCKYParser::output_to_file(string file_name, const char * type) {
             return; 
         }
 
-        int turn = no_sharp_turn?3:0;
-        for (int i = 1; i <= seq_length; i++) {
-            for (int j = i + turn + 1; j <= seq_length; j++) {
+        unsigned turn = no_sharp_turn?3:0;
+        for (unsigned i = 1; i <= seq_length; i++) {
+            for (unsigned j = i + turn + 1; j <= seq_length; j++) {
                 pair<int, int> key = make_pair(i,j);
                 auto got = Pij.find(key);
                 if (got != Pij.end()){
@@ -42,7 +44,7 @@ void BeamCKYParser::output_to_file(string file_name, const char * type) {
 
 void BeamCKYParser::output_to_file_MEA_threshknot_bpseq(string file_name, const char * type, map<int,int>& pairs, string & seq) {
 
-    int i,j;
+    int j;
     char nuc;
     if(!file_name.empty()) {
         printf("Outputing base pairs in bpseq format to %s...\n", file_name.c_str()); 
@@ -52,7 +54,7 @@ void BeamCKYParser::output_to_file_MEA_threshknot_bpseq(string file_name, const 
             return; 
         }
 
-        for (int i = 1; i <= seq_length; i++) {
+        for (unsigned i = 1; i <= seq_length; i++) {
             if (pairs.find(i) != pairs.end()){
                 j = pairs[i];
             }
@@ -68,7 +70,7 @@ void BeamCKYParser::output_to_file_MEA_threshknot_bpseq(string file_name, const 
         printf("Done!\n"); 
     }
     else{
-        for (int i = 1; i <= seq_length; i++) {
+        for (unsigned i = 1; i <= seq_length; i++) {
             if (pairs.find(i) != pairs.end()){
                 j = pairs[i];
             }
@@ -85,7 +87,7 @@ void BeamCKYParser::output_to_file_MEA_threshknot_bpseq(string file_name, const 
 
 void BeamCKYParser::cal_PairProb(State& viterbi) {
 
-    for(int j=0; j<seq_length; j++){
+    for(unsigned j=0; j<seq_length; j++){
         for(auto &item : bestP[j]){
             int i = item.first;
             State state = item.second;
@@ -198,23 +200,23 @@ void BeamCKYParser::PairProb_MEA(string & seq) {
     vector<vector<pf_type> > OPT;
     OPT.resize(seq_length);
 
-    for (int i = 0; i < seq_length; ++i) OPT[i].resize(seq_length);
+    for (unsigned i = 0; i < seq_length; ++i) OPT[i].resize(seq_length);
 
     vector<vector<pf_type>> P;
     P.resize(seq_length);
 
-    for (int i = 0; i < seq_length; ++i) P[i].resize(seq_length);
+    for (unsigned i = 0; i < seq_length; ++i) P[i].resize(seq_length);
 
     vector<vector<int> > back_pointer;
     back_pointer.resize(seq_length);
 
-    for (int i = 0; i < seq_length; ++i) back_pointer[i].resize(seq_length);
+    for (unsigned i = 0; i < seq_length; ++i) back_pointer[i].resize(seq_length);
 
     vector<vector<int>> paired;
     paired.resize(seq_length);
 
     vector<pf_type> Q;
-    for (int i = 0; i < seq_length; ++i) Q.push_back(pf_type(1.0));
+    for (unsigned i = 0; i < seq_length; ++i) Q.push_back(pf_type(1.0));
 
     for(auto& pij : Pij){
         auto i = pij.first.first-1;
@@ -228,10 +230,10 @@ void BeamCKYParser::PairProb_MEA(string & seq) {
         Q[j] -= score;
     }
 
-    for (int i = 0; i < seq_length; ++i) std::sort (paired[i].begin(), paired[i].end());
-    for (int l = 0; l< seq_length; l++){
-        for (int i = 0; i<seq_length - l; i++){
-            int j = i + l;
+    for (unsigned i = 0; i < seq_length; ++i) std::sort (paired[i].begin(), paired[i].end());
+    for (unsigned l = 0; l< seq_length; l++){
+        for (unsigned i = 0; i<seq_length - l; i++){
+            unsigned j = i + l;
             if (i == j){
                 OPT[i][j] = Q[i];
                 back_pointer[i][j] = -1;
@@ -239,7 +241,7 @@ void BeamCKYParser::PairProb_MEA(string & seq) {
             }
             OPT[i][j] = OPT[i][i] + OPT[i+1][j];
             back_pointer[i][j] = -1;
-            for (int k : paired[i]){
+            for (unsigned k : paired[i]){
                 if (k>j) break;
                 pf_type temp_OPT_k1_j;
                 if (k<j) temp_OPT_k1_j = OPT[k+1][j];
@@ -288,11 +290,10 @@ void BeamCKYParser::outside(vector<int> next_pair[]){
 
     // from right to left
     value_type newscore;
-    for(int j = seq_length-1; j > 0; --j) {
+    for(unsigned j = seq_length-1; j > 0; --j) {
         int nucj = nucs[j];
         int nucj1 = (j+1) < seq_length ? nucs[j+1] : -1;
 
-        unordered_map<int, State>& beamstepH = bestH[j];
         unordered_map<int, State>& beamstepMulti = bestMulti[j];
         unordered_map<int, State>& beamstepP = bestP[j];
         unordered_map<int, State>& beamstepM2 = bestM2[j];
@@ -377,7 +378,7 @@ void BeamCKYParser::outside(vector<int> next_pair[]){
                             int nucq = nucs[q];
                             int nucq_1 = nucs[q - 1];
 
-                            if (p == i - 1 && q == j + 1) {
+                            if (p == i - 1 && (unsigned)q == j + 1) {
                                 // helix
 #ifdef lpv
                                 newscore = -v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
@@ -521,3 +522,16 @@ void BeamCKYParser::outside(vector<int> next_pair[]){
     return;
 }
 
+bool BeamCKYParser::get_bpp_ij (pf_type &p_bpp, const int p_i, const int p_j)
+{
+    bool l_bpp_found = false;
+    auto l_Pij_it = Pij.find( make_pair(p_i, p_j) );
+    if (l_Pij_it != Pij.end())
+    {
+        p_bpp = l_Pij_it->second;
+        l_bpp_found = true;
+    }
+    return l_bpp_found;
+}
+
+} // end namespace linearpartition
