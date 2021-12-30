@@ -1,4 +1,25 @@
-# LinearPartition: Linear-Time Approximation of RNA Folding Partition Function and Base Pairing Probabilities
+# LaRA2-LinearPartition: Fork of LinearPartition used in LaRA2.
+This is a fork of the [LinearPartition](https://github.com/LinearFold/LinearPartition) project.
+
+In this fork LinearPartition is modified to be used inside the LaRA2 project.
+
+LaRA2 requires the calculation of the bppm and the energy for a given sequence. To avoid using system calls to the LinearPartition 
+binary, the objective is to adapt LinearPartition so that LaRA2 can call some c++ function directly.
+
+In particular, for the branch **asSubmodule**: Modifications required to use LinearPartition as a submodule of another tool. In this case of LaRA2.
+    
+- Use of namespace linearpartition to avoid clashing with Vienna definitions
+
+- Removed main (therefore LinearPartition can not be used as standalone executable in this branch)
+
+- Add methods to get the bpp and the energy after it has been calculated.
+
+- Small modifications ( castings, type changes, unused params ) to avoid warnings during compilation.
+
+___
+
+*Here is the original README:*
+# Linear-Time Approximation of RNA Folding Partition Function and Base Pairing Probabilities
 
 This repository contains the C++ source code for the LinearPartition project, the first linear-time partition function and base pair probabilities calculation algorithm/software for RNA secondary structures.
 
