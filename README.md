@@ -8,11 +8,13 @@ binary, the objective is to adapt LinearPartition so that LaRA2 can call some c+
 
 In particular, for the branch **asSubmodule**: Modifications required to use LinearPartition as a submodule of another tool. In this case of LaRA2.
     
-- Use of namespace linearpartition to avoid clashing with Vienna definitions
+- Use of namespace linearp to avoid clashing with Vienna definitions
 
 - Removed main (therefore LinearPartition can not be used as standalone executable in this branch)
 
-- Add methods to get the bpp and the energy after it has been calculated.
+- Allow for the usage of LinearPartition-V or LinearPartition-C from LaRA. For this, a new input parameter `useVienna` has been added, together with two template parameters ` <typename pf_type, typename value_type>`. Some other small modifications were required as converting some functions to members of the `BeamCKYParser` class. The preprocesor selector `lpv` has been removed.
+
+- Make the members holding the bppm, energy and log Partition Coefficient public so they can be accessed from LaRA
 
 - Small modifications ( castings, type changes, unused params ) to avoid warnings during compilation.
 

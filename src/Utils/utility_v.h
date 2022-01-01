@@ -25,7 +25,7 @@
 
 #define MAXLOOP 30
 
-namespace linearpartition
+namespace linearp
 {
 
 inline int MIN2(int a, int b) {if (a <= b)return a;else return b;}
@@ -267,6 +267,6 @@ inline int v_score_external_unpaired(int i, int j) {
     return 0;
 }
 
-}// end namespace linearpartition
+}// end namespace linearp
 
 #endif //FASTCKY_UTILITY_V_H

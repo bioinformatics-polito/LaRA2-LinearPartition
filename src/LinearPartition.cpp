@@ -29,10 +29,10 @@
 
 using namespace std;
 
-namespace linearpartition
+namespace linearp
 {
-
-unsigned long quickselect_partition(vector<pair<pf_type, int>>& scores, unsigned long lower, unsigned long upper) {
+template <typename pf_type, typename value_type>
+unsigned long BeamCKYParser<pf_type, value_type>::quickselect_partition(vector<pair<pf_type, int>>& scores, unsigned long lower, unsigned long upper) {
     pf_type pivot = scores[upper].first;
     while (lower < upper) {
         while (scores[lower].first < pivot) ++lower;
@@ -44,7 +44,8 @@ unsigned long quickselect_partition(vector<pair<pf_type, int>>& scores, unsigned
 }
 
 // in-place quick-select
-pf_type quickselect(vector<pair<pf_type, int>>& scores, unsigned long lower, unsigned long upper, unsigned long k) {
+template <typename pf_type, typename value_type>
+pf_type BeamCKYParser<pf_type, value_type>::quickselect(vector<pair<pf_type, int>>& scores, unsigned long lower, unsigned long upper, unsigned long k) {
     if ( lower == upper ) return scores[lower].first;
     unsigned long split = quickselect_partition(scores, lower, upper);
     unsigned long length = split - lower + 1;
@@ -53,8 +54,8 @@ pf_type quickselect(vector<pair<pf_type, int>>& scores, unsigned long lower, uns
     else return quickselect(scores, split+1, upper, k - length);
 }
 
-
-pf_type BeamCKYParser::beam_prune(std::unordered_map<int, State> &beamstep) {
+template <typename pf_type, typename value_type>
+pf_type BeamCKYParser<pf_type, value_type>::beam_prune(std::unordered_map<int, State> &beamstep) {
     scores.clear();
     for (auto &item : beamstep) {
         int i = item.first;
@@ -72,8 +73,8 @@ pf_type BeamCKYParser::beam_prune(std::unordered_map<int, State> &beamstep) {
     return threshold;
 }
 
-
-void BeamCKYParser::prepare(unsigned len) {
+template <typename pf_type, typename value_type>
+void BeamCKYParser<pf_type, value_type>::prepare(unsigned len) {
     seq_length = len;
 
     nucs = new int[seq_length];
@@ -87,7 +88,8 @@ void BeamCKYParser::prepare(unsigned len) {
     scores.reserve(seq_length);
 }
 
-void BeamCKYParser::postprocess() {
+template <typename pf_type, typename value_type>
+void BeamCKYParser<pf_type, value_type>::postprocess() {
 
     delete[] bestC;  
     delete[] bestH;  
@@ -99,7 +101,8 @@ void BeamCKYParser::postprocess() {
     delete[] nucs;  
 }
 
-void BeamCKYParser::parse(string& seq) {
+template <typename pf_type, typename value_type>
+void BeamCKYParser<pf_type, value_type>::parse(string& seq) {
       
     struct timeval parse_starttime, parse_endtime;
 
@@ -124,18 +127,17 @@ void BeamCKYParser::parse(string& seq) {
     }
 
 #ifdef SPECIAL_HP
-#ifdef lpv
-    v_init_tetra_hex_tri(seq, seq_length, if_tetraloops, if_hexaloops, if_triloops);
-#endif
+    if (useVienna)
+        v_init_tetra_hex_tri(seq, seq_length, if_tetraloops, if_hexaloops, if_triloops);
 #endif
 
-#ifdef lpv
+    if (useVienna) {
         if(seq_length > 0) bestC[0].alpha = 0.0;
         if(seq_length > 1) bestC[1].alpha = 0.0;
-#else
+    } else {
         if(seq_length > 0) Fast_LogPlusEquals(bestC[0].alpha, score_external_unpaired(0, 0));
         if(seq_length > 1) Fast_LogPlusEquals(bestC[1].alpha, score_external_unpaired(0, 1));
-#endif
+    }
 
     value_type newscore;
     for(unsigned j = 0; j < seq_length; ++j) {
@@ -160,7 +162,7 @@ void BeamCKYParser::parse(string& seq) {
                 if (jnext != -1) {
                     int nucjnext = nucs[jnext];
                     int nucjnext_1 = (jnext - 1) > -1 ? nucs[jnext - 1] : -1;
-#ifdef lpv
+                    if (useVienna) {
                         int tetra_hex_tri = -1;
 #ifdef SPECIAL_HP
                         if (jnext-j-1 == 4) // 6:tetra
@@ -172,10 +174,10 @@ void BeamCKYParser::parse(string& seq) {
 #endif
                         newscore = - v_score_hairpin(j, jnext, nucj, nucj1, nucjnext_1, nucjnext, tetra_hex_tri);
                         Fast_LogPlusEquals(bestH[jnext][j].alpha, newscore/kT);
-#else
+                    } else {
                         newscore = score_hairpin(j, jnext, nucj, nucj1, nucjnext_1, nucjnext);
                         Fast_LogPlusEquals(bestH[jnext][j].alpha, newscore);
-#endif
+                    }
                 }
             }
 
@@ -195,22 +197,22 @@ void BeamCKYParser::parse(string& seq) {
                         int nucjnext_1 = (jnext - 1) > -1 ? nucs[jnext - 1] : -1;
 
                         // 1. extend h(i, j) to h(i, jnext)=
-#ifdef lpv
-                        int tetra_hex_tri = -1;
+                        if (useVienna) {
+                            int tetra_hex_tri = -1;
 #ifdef SPECIAL_HP
-                        if (jnext-i-1 == 4) // 6:tetra
-                            tetra_hex_tri = if_tetraloops[i];
-                        else if (jnext-i-1 == 6) // 8:hexa
-                            tetra_hex_tri = if_hexaloops[i];
-                        else if (jnext-i-1 == 3) // 5:tri
-                            tetra_hex_tri = if_triloops[i];
+                            if (jnext-i-1 == 4) // 6:tetra
+                                tetra_hex_tri = if_tetraloops[i];
+                            else if (jnext-i-1 == 6) // 8:hexa
+                                tetra_hex_tri = if_hexaloops[i];
+                            else if (jnext-i-1 == 3) // 5:tri
+                                tetra_hex_tri = if_triloops[i];
 #endif
-                        newscore = - v_score_hairpin(i, jnext, nuci, nuci1, nucjnext_1, nucjnext, tetra_hex_tri);
-                        Fast_LogPlusEquals(bestH[jnext][i].alpha, newscore/kT);
-#else
-                        newscore = score_hairpin(i, jnext, nuci, nuci1, nucjnext_1, nucjnext);
-                        Fast_LogPlusEquals(bestH[jnext][i].alpha, newscore);
-#endif
+                            newscore = - v_score_hairpin(i, jnext, nuci, nuci1, nucjnext_1, nucjnext, tetra_hex_tri);
+                            Fast_LogPlusEquals(bestH[jnext][i].alpha, newscore/kT);
+                        } else {
+                            newscore = score_hairpin(i, jnext, nuci, nuci1, nucjnext_1, nucjnext);
+                            Fast_LogPlusEquals(bestH[jnext][i].alpha, newscore);
+                        }
                     }
 
                     // 2. generate p(i, j)
@@ -235,24 +237,24 @@ void BeamCKYParser::parse(string& seq) {
                 // 1. extend (i, j) to (i, jnext)
                 {
                     if (jnext != -1) {
-#ifdef lpv
-                        Fast_LogPlusEquals(bestMulti[jnext][i].alpha, state.alpha);
-#else
-                        newscore = score_multi_unpaired(j, jnext - 1);
-                        Fast_LogPlusEquals(bestMulti[jnext][i].alpha, state.alpha + newscore);
-#endif
+                        if (useVienna)
+                            Fast_LogPlusEquals(bestMulti[jnext][i].alpha, state.alpha);
+                        else {
+                            newscore = score_multi_unpaired(j, jnext - 1);
+                            Fast_LogPlusEquals(bestMulti[jnext][i].alpha, state.alpha + newscore);
+                        }
                     }
                 }
 
                 // 2. generate P (i, j)
                 {
-#ifdef lpv
-                    newscore = - v_score_multi(i, j, nuci, nuci1, nucs[j-1], nucj, seq_length);
-                    Fast_LogPlusEquals(beamstepP[i].alpha, state.alpha + newscore/kT);
-#else
-                    newscore = score_multi(i, j, nuci, nuci1, nucs[j-1], nucj, seq_length);
-                    Fast_LogPlusEquals(beamstepP[i].alpha, state.alpha + newscore);
-#endif
+                    if (useVienna) {
+                        newscore = - v_score_multi(i, j, nuci, nuci1, nucs[j-1], nucj, seq_length);
+                        Fast_LogPlusEquals(beamstepP[i].alpha, state.alpha + newscore/kT);
+                    } else {
+                        newscore = score_multi(i, j, nuci, nuci1, nucs[j-1], nucj, seq_length);
+                        Fast_LogPlusEquals(beamstepP[i].alpha, state.alpha + newscore);
+                    }
                 }
             }
         }
@@ -275,9 +277,10 @@ void BeamCKYParser::parse(string& seq) {
                 // 1. generate new helix / single_branch
                 // new state is of shape p..i..j..q
                 if (i >0 && j<seq_length-1) {
-#ifndef lpv
-                    value_type precomputed = score_junction_B(j, i, nucj, nucj1, nuci_1, nuci);
-#endif
+                    value_type precomputed = 0;
+                    if (!useVienna)
+                        precomputed = score_junction_B(j, i, nucj, nucj1, nuci_1, nuci);
+                        
                     for (int p = i - 1; p >= std::max(i - SINGLE_MAX_LEN, 0); --p) {
                         int nucp = nucs[p];
                         int nucp1 = nucs[p + 1]; 
@@ -288,36 +291,35 @@ void BeamCKYParser::parse(string& seq) {
 
                             if (p == i - 1 && (unsigned)q == j + 1) {
                                 // helix
-#ifdef lpv
-                                newscore = -v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
-                                                             nuci_1, nuci, nucj, nucj1);
-
-                                // SHAPE for Vienna only
-                                if (use_shape)
-                                {
-                                    newscore += -(pseudo_energy_stack[p] + pseudo_energy_stack[i] + pseudo_energy_stack[j] + pseudo_energy_stack[q]);
+                                if (useVienna) {
+                                    newscore = -v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
+                                                                 nuci_1, nuci, nucj, nucj1);
+    
+                                    // SHAPE for Vienna only
+                                    if (use_shape)
+                                    {
+                                        newscore += -(pseudo_energy_stack[p] + pseudo_energy_stack[i] + pseudo_energy_stack[j] + pseudo_energy_stack[q]);
+                                    }
+    
+    
+                                    Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore/kT);
+                                } else {
+                                    newscore = score_helix(nucp, nucp1, nucq_1, nucq);
+                                    Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore);
                                 }
-
-
-                                Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore/kT);
-#else
-                                newscore = score_helix(nucp, nucp1, nucq_1, nucq);
-                                Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore);
-
-#endif
                             } else {
                                 // single branch
-#ifdef lpv
-                                newscore = - v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
-                                                   nuci_1, nuci, nucj, nucj1);
-                                Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore/kT);
-#else
-                                newscore = score_junction_B(p, q, nucp, nucp1, nucq_1, nucq) +
-                                        precomputed +
-                                        score_single_without_junctionB(p, q, i, j,
-                                                                       nuci_1, nuci, nucj, nucj1);
-                                Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore);
-#endif
+                                if (useVienna) {
+                                    newscore = - v_score_single(p,q,i,j, nucp, nucp1, nucq_1, nucq,
+                                                                nuci_1, nuci, nucj, nucj1);
+                                    Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore/kT);
+                                } else {
+                                    newscore = score_junction_B(p, q, nucp, nucp1, nucq_1, nucq) +
+                                               precomputed +
+                                               score_single_without_junctionB(p, q, i, j,
+                                                                              nuci_1, nuci, nucj, nucj1);
+                                    Fast_LogPlusEquals(bestP[q][p].alpha, state.alpha + newscore);
+                                }
                             }
                             q = next_pair[nucp][q];
                         }
@@ -326,25 +328,26 @@ void BeamCKYParser::parse(string& seq) {
 
                 // 2. M = P
                 if(i > 0 && j < seq_length-1){
-#ifdef lpv
+                    if (useVienna) {
                         newscore = - v_score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
                         Fast_LogPlusEquals(beamstepM[i].alpha, state.alpha + newscore/kT);
-#else
+                    } else {
                         newscore = score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
                         Fast_LogPlusEquals(beamstepM[i].alpha, state.alpha + newscore);
-#endif
+                    }
                 }
 
                 // 3. M2 = M + P
                 int k = i - 1;
                 if ( k > 0 && !bestM[k].empty()) {
-#ifdef lpv
-                    newscore = - v_score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
-                    pf_type m1_alpha = state.alpha + newscore/kT;
-#else
-                    newscore = score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
-                    pf_type m1_alpha = state.alpha + newscore;
-#endif
+                    pf_type m1_alpha;
+                    if (useVienna) {
+                        newscore = - v_score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
+                        m1_alpha = state.alpha + newscore/kT;
+                    } else {
+                        newscore = score_M1(i, j, j, nuci_1, nuci, nucj, nucj1, seq_length);
+                        m1_alpha = state.alpha + newscore;
+                    }
                     for (auto &m : bestM[k]) {
                         int newi = m.first;
                         State& m_state = m.second;
@@ -359,25 +362,25 @@ void BeamCKYParser::parse(string& seq) {
                         State& prefix_C = bestC[k];
                         int nuck = nuci_1;
                         int nuck1 = nuci;
-#ifdef lpv
-                        newscore = - v_score_external_paired(k+1, j, nuck, nuck1,
-                                                             nucj, nucj1, seq_length);
-                        Fast_LogPlusEquals(beamstepC.alpha, prefix_C.alpha + state.alpha + newscore/kT);      
-#else
-                        newscore = score_external_paired(k+1, j, nuck, nuck1,
-                                                             nucj, nucj1, seq_length);
-                        Fast_LogPlusEquals(beamstepC.alpha, prefix_C.alpha + state.alpha + newscore);
-#endif
-                    } else {
-#ifdef lpv
-                        newscore = - v_score_external_paired(0, j, -1, nucs[0],
+                        if (useVienna) {
+                            newscore = - v_score_external_paired(k+1, j, nuck, nuck1,
                                                                  nucj, nucj1, seq_length);
-                        Fast_LogPlusEquals(beamstepC.alpha, state.alpha + newscore/kT);       
-#else
-                        newscore = score_external_paired(0, j, -1, nucs[0],
+                            Fast_LogPlusEquals(beamstepC.alpha, prefix_C.alpha + state.alpha + newscore/kT);      
+                        } else {
+                            newscore = score_external_paired(k+1, j, nuck, nuck1,
                                                              nucj, nucj1, seq_length);
-                        Fast_LogPlusEquals(beamstepC.alpha, state.alpha + newscore);
-#endif
+                            Fast_LogPlusEquals(beamstepC.alpha, prefix_C.alpha + state.alpha + newscore);
+                        }
+                    } else {
+                        if (useVienna) {
+                            newscore = - v_score_external_paired(0, j, -1, nucs[0],
+                                                                 nucj, nucj1, seq_length);
+                            Fast_LogPlusEquals(beamstepC.alpha, state.alpha + newscore/kT);       
+                        } else {
+                            newscore = score_external_paired(0, j, -1, nucs[0],
+                                                             nucj, nucj1, seq_length);
+                            Fast_LogPlusEquals(beamstepC.alpha, state.alpha + newscore);
+                        }
                     }
                 }
             }
@@ -396,14 +399,14 @@ void BeamCKYParser::parse(string& seq) {
                     int nucp = nucs[p];
                     int q = next_pair[nucp][j];
                     if (q != -1 && ((i - p - 1) <= SINGLE_MAX_LEN)) {
-#ifdef lpv
-                    Fast_LogPlusEquals(bestMulti[q][p].alpha, state.alpha);      
+                        if (useVienna)
+                            Fast_LogPlusEquals(bestMulti[q][p].alpha, state.alpha);      
 
-#else
-                    newscore = score_multi_unpaired(p+1, i-1) +
-                                    score_multi_unpaired(j+1, q-1);
-                    Fast_LogPlusEquals(bestMulti[q][p].alpha, state.alpha + newscore);      
-#endif
+                        else {
+                            newscore = score_multi_unpaired(p+1, i-1) +
+                                            score_multi_unpaired(j+1, q-1);
+                            Fast_LogPlusEquals(bestMulti[q][p].alpha, state.alpha + newscore);      
+                        }
                     }
                 }
 
@@ -420,12 +423,13 @@ void BeamCKYParser::parse(string& seq) {
                 int i = item.first;
                 State& state = item.second;
                 if (j < seq_length-1) {
-#ifdef lpv
-                    Fast_LogPlusEquals(bestM[j+1][i].alpha, state.alpha); 
-#else
-                    newscore = score_multi_unpaired(j + 1, j + 1);
-                    Fast_LogPlusEquals(bestM[j+1][i].alpha, state.alpha + newscore); 
-#endif
+                    if (useVienna)
+                        Fast_LogPlusEquals(bestM[j+1][i].alpha, state.alpha); 
+                        
+                    else {
+                        newscore = score_multi_unpaired(j + 1, j + 1);
+                        Fast_LogPlusEquals(bestM[j+1][i].alpha, state.alpha + newscore); 
+                    }
                 }
             }
         }
@@ -434,13 +438,13 @@ void BeamCKYParser::parse(string& seq) {
         {
             // C = C + U
             if (j < seq_length-1) {
-#ifdef lpv
-                Fast_LogPlusEquals(bestC[j+1].alpha, beamstepC.alpha); 
+                if (useVienna)
+                    Fast_LogPlusEquals(bestC[j+1].alpha, beamstepC.alpha); 
                     
-#else
-                newscore = score_external_unpaired(j+1, j+1);
-                Fast_LogPlusEquals(bestC[j+1].alpha, beamstepC.alpha + newscore); 
-#endif
+                else {
+                    newscore = score_external_unpaired(j+1, j+1);
+                    Fast_LogPlusEquals(bestC[j+1].alpha, beamstepC.alpha + newscore); 
+                }
             }
         }
     }  // end of for-loo j
@@ -452,11 +456,10 @@ void BeamCKYParser::parse(string& seq) {
 
     // unsigned long nos_tot = nos_H + nos_P + nos_M2 + nos_Multi + nos_M + nos_C;
 
-#ifdef lpv
-    m_energy = -kT * viterbi.alpha / 100.0; // Free Energy of Ensemble kcal/mol
-#else
-    fprintf(stderr,"Log Partition Coefficient: %.5f\n", viterbi.alpha);
-#endif
+    if (useVienna)
+        m_energy = -kT * viterbi.alpha / 100.0; // Free Energy of Ensemble kcal/mol
+    else
+        m_logPartitionCoef = viterbi.alpha;
 
     if(is_verbose) fprintf(stderr,"Partition Function Calculation Time: %.2f seconds.\n", parse_elapsed_time);
 
@@ -479,7 +482,8 @@ void BeamCKYParser::parse(string& seq) {
     return;
 }
 
-void BeamCKYParser::print_states(FILE *fptr, unordered_map<int, State>& states, int j, string label, bool inside_only, double threshold) {    
+template <typename pf_type, typename value_type>
+void BeamCKYParser<pf_type, value_type>::print_states(FILE *fptr, unordered_map<int, State>& states, int j, string label, bool inside_only, double threshold) {    
     for (auto & item : states) {
         int i = item.first;
         State & state = item.second;
@@ -489,7 +493,8 @@ void BeamCKYParser::print_states(FILE *fptr, unordered_map<int, State>& states, 
     }
 }
 
-void BeamCKYParser::dump_forest(string seq, bool inside_only) {  
+template <typename pf_type, typename value_type>
+void BeamCKYParser<pf_type, value_type>::dump_forest(string seq, bool inside_only) {  
     printf("Dumping (%s) Forest to %s...\n", (inside_only ? "Inside-Only" : "Inside-Outside"), forest_file.c_str());
     FILE *fptr = fopen(forest_file.c_str(), "w");  // lhuang: should be fout >>
     fprintf(fptr, "%s\n", seq.c_str());
@@ -509,29 +514,32 @@ void BeamCKYParser::dump_forest(string seq, bool inside_only) {
         print_states(fptr, bestMulti[j], j, "Multi", inside_only, threshold);
 }
 
-BeamCKYParser::BeamCKYParser(int beam_size,
-                             bool nosharpturn,
-                             bool verbose,
-                             string bppfile,
-                             string bppfileindex,
-                             bool pfonly,
-                             float bppcutoff,
-			                 string forestfile,
-                             bool mea,
-                             float MEA_gamma,
-                             string MEA_file_index,
-                             bool MEA_bpseq,
-                             bool ThreshKnot,
-                             float ThreshKnot_threshold,
-                             string ThreshKnot_file_index,
-                             string shape_file_path)
-    : beam(beam_size), 
+template <typename pf_type, typename value_type>
+BeamCKYParser<pf_type, value_type>::BeamCKYParser(bool useVienna,
+                                                  int beam_size,
+                                                  bool nosharpturn,
+                                                  float bppcutoff,
+                                                  bool verbose,
+                                                  string bppfile,
+                                                  string bppfileindex,
+                                                  bool pfonly,
+                                                  string forestfile,
+                                                  bool mea,
+                                                  float MEA_gamma,
+                                                  string MEA_file_index,
+                                                  bool MEA_bpseq,
+                                                  bool ThreshKnot,
+                                                  float ThreshKnot_threshold,
+                                                  string ThreshKnot_file_index,
+                                                  string shape_file_path)
+    : useVienna(useVienna),
+      beam(beam_size), 
       no_sharp_turn(nosharpturn), 
+      bpp_cutoff(bppcutoff),
       is_verbose(verbose),
       bpp_file(bppfile),
       bpp_file_index(bppfileindex),
       pf_only(pfonly),
-      bpp_cutoff(bppcutoff),
       forest_file(forestfile), 
       mea_(mea),
       gamma(MEA_gamma),
@@ -540,12 +548,12 @@ BeamCKYParser::BeamCKYParser(int beam_size,
       threshknot_(ThreshKnot),
       threshknot_threshold(ThreshKnot_threshold),
       threshknot_file_index(ThreshKnot_file_index){
-#ifdef lpv
+    if(useVienna)
         initialize();
-#else
+    else {
         initialize();
         initialize_cachesingle();
-#endif
+    }
 
     if (shape_file_path != "" ){
         use_shape = true;
@@ -590,11 +598,7 @@ BeamCKYParser::BeamCKYParser(int beam_size,
     }
 }
 
-#ifdef lpv
-float BeamCKYParser::get_energy()
-{
-    return m_energy;
-}
-#endif
+template class BeamCKYParser<viennaModel::pf_type, viennaModel::value_type>;
+template class BeamCKYParser<contraModel::pf_type, contraModel::value_type>;
 
-} // end namespace linearpartition
+} // end namespace linearp

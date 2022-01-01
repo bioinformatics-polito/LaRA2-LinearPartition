@@ -17,7 +17,7 @@
 #define SPECIAL_HP
 //int special_hp = 1;
 
-namespace linearpartition
+namespace linearp
 {
 
 double lxc37=107.856;
@@ -422,4 +422,4 @@ int dangle3_37[NBPAIRS+1][5] =
         /* UA */ {   -50,   -80,   -50,   -80,   -60},
         /* NN */ {   -10,   -70,   -10,   -70,   -10}
     };
-} //end namespace linearpartition
+} //end namespace linearp

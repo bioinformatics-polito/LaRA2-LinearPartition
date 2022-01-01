@@ -5,7 +5,7 @@
 #define NBPAIRS 7
 #endif
 
-namespace linearpartition
+namespace linearp
 {
 
 int int21_37[NBPAIRS+1][NBPAIRS+1][5][5][5] =
@@ -2001,4 +2001,4 @@ int int21_37[NBPAIRS+1][NBPAIRS+1][5][5][5] =
    }
   }
  }};
-} // namespace linearpartition
+} // namespace linearp
