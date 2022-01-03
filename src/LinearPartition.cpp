@@ -598,7 +598,7 @@ BeamCKYParser<pf_type, value_type>::BeamCKYParser(bool useVienna,
     }
 }
 
-template class BeamCKYParser<viennaModel::pf_type, viennaModel::value_type>;
-template class BeamCKYParser<contraModel::pf_type, contraModel::value_type>;
+template class BeamCKYParser<viennaTypes::pf_type, viennaTypes::value_type>;
+template class BeamCKYParser<contraTypes::pf_type, contraTypes::value_type>;
 
 } // end namespace linearp

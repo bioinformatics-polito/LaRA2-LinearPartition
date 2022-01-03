@@ -54,12 +54,12 @@ struct comp
     }
 };
 
-struct viennaModel
+struct viennaTypes
 {
     typedef float pf_type;
-    typedef int value_type;
+    typedef int   value_type;
 };
-struct contraModel
+struct contraTypes
 {
     typedef double pf_type;
     typedef double value_type;
