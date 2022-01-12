@@ -127,7 +127,7 @@ string BeamCKYParser<pf_type, value_type>::back_trace(const int i, const int j, 
         else return "." + back_trace(i+1,j, back_pointer);
     }else if (back_pointer[i][j] != 0){
         int k = back_pointer[i][j];
-        assert(k + 1 > 0 && k + 1 <= seq_length);
+        assert(k + 1 > 0 &&  (unsigned)k + 1 <= seq_length);
         string temp;
         if (k == j) temp = "";
         else temp = back_trace(k+1,j, back_pointer);
